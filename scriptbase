@@ -1,0 +1,618 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local parent = game:GetService("CoreGui")
+pcall(function()
+    if gethui then
+        parent = gethui()
+    end
+end)
+
+local SilentEnabled = false
+local CameraLockEnabled = true
+local Aiming = false
+local FOVRadius = 150
+local MinFOV = 60
+local MaxFOV = 400
+
+local currentTarget
+local currentHumanoid
+local currentHumanoidConn
+local currentHead
+local targetHeadForRaycast
+local oldNamecall
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "WaveKorruptZombies"
+gui.ResetOnSpawn = false
+gui.Parent = parent
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 420, 0, 260)
+main.Position = UDim2.new(0.5, -210, 0.5, -130)
+main.BackgroundColor3 = Color3.fromRGB(12, 9, 35)
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+main.Parent = gui
+
+local mainCorner = Instance.new("UICorner", main)
+mainCorner.CornerRadius = UDim.new(0, 6)
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 32)
+topBar.BackgroundColor3 = Color3.fromRGB(23, 14, 60)
+topBar.BorderSizePixel = 0
+topBar.Parent = main
+
+local topCorner = Instance.new("UICorner", topBar)
+topCorner.CornerRadius = UDim.new(0, 6)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -80, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamSemibold
+title.TextSize = 14
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextColor3 = Color3.fromRGB(235, 225, 255)
+title.Text = "Ｒ¥乙乇メ|  Korrupt Zombies | http://discord.gg/WnQDb7SUQt"
+title.Parent = topBar
+
+local pfp = Instance.new("ImageLabel")
+pfp.Size = UDim2.new(0, 28, 0, 28)
+pfp.Position = UDim2.new(1, -32, 0.5, -14)
+pfp.BackgroundTransparency = 1
+pfp.Image = "https://cdn.discordapp.com/avatars/1380274664018022531/93957a9a08fd7f7b7456bbc8cb0d38b5?size=1024"
+pfp.Parent = topBar
+
+local tabs = Instance.new("Frame")
+tabs.Size = UDim2.new(1, -20, 0, 26)
+tabs.Position = UDim2.new(0, 10, 0, 36)
+tabs.BackgroundTransparency = 1
+tabs.Parent = main
+
+local tabUnderline = Instance.new("Frame")
+tabUnderline.Size = UDim2.new(1, 0, 0, 1)
+tabUnderline.Position = UDim2.new(0, 0, 1, -1)
+tabUnderline.BackgroundColor3 = Color3.fromRGB(40, 25, 85)
+tabUnderline.BorderSizePixel = 0
+tabUnderline.Parent = tabs
+
+local tabSilent = Instance.new("TextButton")
+tabSilent.Size = UDim2.new(0, 80, 0, 24)
+tabSilent.Position = UDim2.new(0, 0, 0, 0)
+tabSilent.BackgroundColor3 = Color3.fromRGB(23, 14, 60)
+tabSilent.BorderSizePixel = 0
+tabSilent.Font = Enum.Font.GothamSemibold
+tabSilent.TextSize = 13
+tabSilent.Text = "Silent"
+tabSilent.TextColor3 = Color3.fromRGB(235, 225, 255)
+tabSilent.Parent = tabs
+
+local tabSettings = Instance.new("TextButton")
+tabSettings.Size = UDim2.new(0, 80, 0, 24)
+tabSettings.Position = UDim2.new(0, 82, 0, 0)
+tabSettings.BackgroundColor3 = Color3.fromRGB(12, 9, 35)
+tabSettings.BorderSizePixel = 0
+tabSettings.Font = Enum.Font.GothamSemibold
+tabSettings.TextSize = 13
+tabSettings.Text = "Settings"
+tabSettings.TextColor3 = Color3.fromRGB(120, 110, 170)
+tabSettings.Parent = tabs
+
+local content = Instance.new("Frame")
+content.Size = UDim2.new(1, -20, 1, -70)
+content.Position = UDim2.new(0, 10, 0, 66)
+content.BackgroundTransparency = 1
+content.Parent = main
+
+local pageSilent = Instance.new("Frame")
+pageSilent.Size = UDim2.new(1, 0, 1, 0)
+pageSilent.BackgroundTransparency = 1
+pageSilent.Parent = content
+
+local pageSettings = Instance.new("Frame")
+pageSettings.Size = UDim2.new(1, 0, 1, 0)
+pageSettings.Visible = false
+pageSettings.BackgroundTransparency = 1
+pageSettings.Parent = content
+
+local leftGroup = Instance.new("Frame")
+leftGroup.Size = UDim2.new(0.45, 0, 1, 0)
+leftGroup.BackgroundColor3 = Color3.fromRGB(15, 11, 40)
+leftGroup.BorderSizePixel = 0
+leftGroup.Parent = pageSilent
+
+local leftCorner = Instance.new("UICorner", leftGroup)
+leftCorner.CornerRadius = UDim.new(0, 4)
+
+local leftTitle = Instance.new("TextLabel")
+leftTitle.Size = UDim2.new(1, -10, 0, 18)
+leftTitle.Position = UDim2.new(0, 6, 0, 4)
+leftTitle.BackgroundTransparency = 1
+leftTitle.Font = Enum.Font.GothamSemibold
+leftTitle.TextSize = 13
+leftTitle.TextXAlignment = Enum.TextXAlignment.Left
+leftTitle.TextColor3 = Color3.fromRGB(180, 170, 230)
+leftTitle.Text = "Silent Aim"
+leftTitle.Parent = leftGroup
+
+local rightGroup = Instance.new("Frame")
+rightGroup.Size = UDim2.new(0.52, 0, 1, 0)
+rightGroup.Position = UDim2.new(0.48, 0, 0, 0)
+rightGroup.BackgroundColor3 = Color3.fromRGB(15, 11, 40)
+rightGroup.BorderSizePixel = 0
+rightGroup.Parent = pageSilent
+
+local rightCorner = Instance.new("UICorner", rightGroup)
+rightCorner.CornerRadius = UDim.new(0, 4)
+
+local rightTitle = Instance.new("TextLabel")
+rightTitle.Size = UDim2.new(1, -10, 0, 18)
+rightTitle.Position = UDim2.new(0, 6, 0, 4)
+rightTitle.BackgroundTransparency = 1
+rightTitle.Font = Enum.Font.GothamSemibold
+rightTitle.TextSize = 13
+rightTitle.TextXAlignment = Enum.TextXAlignment.Left
+rightTitle.TextColor3 = Color3.fromRGB(180, 170, 230)
+rightTitle.Text = "Aim Settings"
+rightTitle.Parent = rightGroup
+
+local function createToggle(parent, text, order, default, callback)
+    local holder = Instance.new("Frame")
+    holder.Size = UDim2.new(1, -12, 0, 22)
+    holder.Position = UDim2.new(0, 6, 0, 22 + (order * 22))
+    holder.BackgroundTransparency = 1
+    holder.Parent = parent
+
+    local box = Instance.new("TextButton")
+    box.Size = UDim2.new(0, 16, 0, 16)
+    box.Position = UDim2.new(0, 0, 0.5, -8)
+    box.BackgroundColor3 = Color3.fromRGB(18, 13, 50)
+    box.BorderSizePixel = 0
+    box.Text = ""
+    box.AutoButtonColor = false
+    box.Parent = holder
+
+    local boxCorner = Instance.new("UICorner", box)
+    boxCorner.CornerRadius = UDim.new(0, 3)
+
+    local check = Instance.new("Frame")
+    check.Size = UDim2.new(1, -4, 1, -4)
+    check.Position = UDim2.new(0, 2, 0, 2)
+    check.BackgroundColor3 = Color3.fromRGB(140, 90, 255)
+    check.BorderSizePixel = 0
+    check.Visible = default
+    check.Parent = box
+
+    local checkCorner = Instance.new("UICorner", check)
+    checkCorner.CornerRadius = UDim.new(0, 3)
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -24, 1, 0)
+    label.Position = UDim2.new(0, 24, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextColor3 = Color3.fromRGB(210, 200, 245)
+    label.Text = text
+    label.Parent = holder
+
+    local state = default
+
+    local function refresh()
+        check.Visible = state
+        if state then
+            box.BackgroundColor3 = Color3.fromRGB(35, 20, 90)
+        else
+            box.BackgroundColor3 = Color3.fromRGB(18, 13, 50)
+        end
+    end
+
+    refresh()
+
+    box.MouseButton1Click:Connect(function()
+        state = not state
+        refresh()
+        if callback then
+            callback(state)
+        end
+    end)
+
+    return function(v)
+        state = v
+        refresh()
+        if callback then
+            callback(state)
+        end
+    end
+end
+
+local function createKeyLabel(parent, text, keyText, order)
+    local holder = Instance.new("Frame")
+    holder.Size = UDim2.new(1, -12, 0, 22)
+    holder.Position = UDim2.new(0, 6, 0, 22 + (order * 22))
+    holder.BackgroundTransparency = 1
+    holder.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 1, 0)
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextColor3 = Color3.fromRGB(210, 200, 245)
+    label.Text = text
+    label.Parent = holder
+
+    local keyBox = Instance.new("TextLabel")
+    keyBox.Size = UDim2.new(0, 40, 0, 18)
+    keyBox.Position = UDim2.new(1, -44, 0.5, -9)
+    keyBox.BackgroundColor3 = Color3.fromRGB(18, 13, 50)
+    keyBox.BorderSizePixel = 0
+    keyBox.Font = Enum.Font.GothamSemibold
+    keyBox.TextSize = 12
+    keyBox.TextColor3 = Color3.fromRGB(210, 200, 245)
+    keyBox.Text = keyText
+    keyBox.Parent = holder
+
+    local corner = Instance.new("UICorner", keyBox)
+    corner.CornerRadius = UDim.new(0, 3)
+end
+
+local sliderLabel = Instance.new("TextLabel")
+sliderLabel.Size = UDim2.new(1, -12, 0, 18)
+sliderLabel.Position = UDim2.new(0, 6, 0, 28)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.Font = Enum.Font.Gotham
+sliderLabel.TextSize = 13
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel.TextColor3 = Color3.fromRGB(210, 200, 245)
+sliderLabel.Text = "FOV Radius"
+sliderLabel.Parent = rightGroup
+
+local sliderBack = Instance.new("Frame")
+sliderBack.Size = UDim2.new(1, -12, 0, 6)
+sliderBack.Position = UDim2.new(0, 6, 0, 50)
+sliderBack.BackgroundColor3 = Color3.fromRGB(25, 18, 65)
+sliderBack.BorderSizePixel = 0
+sliderBack.Parent = rightGroup
+
+local sliderCorner = Instance.new("UICorner", sliderBack)
+sliderCorner.CornerRadius = UDim.new(0, 3)
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0, 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(150, 95, 255)
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = sliderBack
+
+local sliderFillCorner = Instance.new("UICorner", sliderFill)
+sliderFillCorner.CornerRadius = UDim.new(0, 3)
+
+local sliderHandle = Instance.new("Frame")
+sliderHandle.Size = UDim2.new(0, 10, 0, 14)
+sliderHandle.Position = UDim2.new(0, -5, 0.5, -7)
+sliderHandle.BackgroundColor3 = Color3.fromRGB(210, 200, 255)
+sliderHandle.BorderSizePixel = 0
+sliderHandle.Parent = sliderBack
+
+local sliderHandleCorner = Instance.new("UICorner", sliderHandle)
+sliderHandleCorner.CornerRadius = UDim.new(0, 3)
+
+local sliderValueLabel = Instance.new("TextLabel")
+sliderValueLabel.Size = UDim2.new(1, -12, 0, 16)
+sliderValueLabel.Position = UDim2.new(0, 6, 0, 64)
+sliderValueLabel.BackgroundTransparency = 1
+sliderValueLabel.Font = Enum.Font.Gotham
+sliderValueLabel.TextSize = 12
+sliderValueLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderValueLabel.TextColor3 = Color3.fromRGB(150, 140, 210)
+sliderValueLabel.Parent = rightGroup
+
+local bigToggle = Instance.new("TextButton")
+bigToggle.Size = UDim2.new(1, -12, 0, 32)
+bigToggle.Position = UDim2.new(0, 6, 0, 96)
+bigToggle.BackgroundColor3 = Color3.fromRGB(120, 50, 120)
+bigToggle.BorderSizePixel = 0
+bigToggle.AutoButtonColor = false
+bigToggle.Font = Enum.Font.GothamSemibold
+bigToggle.TextSize = 14
+bigToggle.TextColor3 = Color3.fromRGB(240, 230, 255)
+bigToggle.Parent = rightGroup
+
+local bigToggleCorner = Instance.new("UICorner", bigToggle)
+bigToggleCorner.CornerRadius = UDim.new(0, 4)
+
+local bigToggleLine = Instance.new("Frame")
+bigToggleLine.Size = UDim2.new(1, 0, 0, 1)
+bigToggleLine.Position = UDim2.new(0, 0, 1, -1)
+bigToggleLine.BackgroundColor3 = Color3.fromRGB(190, 130, 255)
+bigToggleLine.BorderSizePixel = 0
+bigToggleLine.Parent = bigToggle
+
+local fovDragging = false
+
+local fovCircle = Instance.new("Frame")
+fovCircle.Size = UDim2.new(0, FOVRadius * 2, 0, FOVRadius * 2)
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+fovCircle.BackgroundTransparency = 1
+fovCircle.Visible = true
+fovCircle.Parent = gui
+
+local fovStroke = Instance.new("UIStroke")
+fovStroke.Thickness = 1.5
+fovStroke.Color = Color3.fromRGB(190, 130, 255)
+fovStroke.Parent = fovCircle
+
+local fovCorner = Instance.new("UICorner", fovCircle)
+fovCorner.CornerRadius = UDim.new(1, 0)
+
+local function updateFOVVisual()
+    local ratio = (FOVRadius - MinFOV) / (MaxFOV - MinFOV)
+    sliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+    sliderHandle.Position = UDim2.new(ratio, -5, 0.5, -7)
+    sliderValueLabel.Text = "Current FOV : " .. tostring(FOVRadius)
+    fovCircle.Size = UDim2.new(0, FOVRadius * 2, 0, FOVRadius * 2)
+    fovCircle.Visible = SilentEnabled
+end
+
+local function setFOVFromX(x)
+    local absPos = sliderBack.AbsolutePosition.X
+    local absSize = sliderBack.AbsoluteSize.X
+    local ratio = (x - absPos) / absSize
+    if ratio < 0 then
+        ratio = 0
+    elseif ratio > 1 then
+        ratio = 1
+    end
+    FOVRadius = math.floor(MinFOV + (MaxFOV - MinFOV) * ratio)
+    updateFOVVisual()
+end
+
+sliderBack.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        fovDragging = true
+        setFOVFromX(input.Position.X)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if fovDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        setFOVFromX(input.Position.X)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        fovDragging = false
+    end
+end)
+
+local function setMainToggle(state)
+    SilentEnabled = state
+    if state then
+        bigToggle.BackgroundColor3 = Color3.fromRGB(80, 190, 120)
+        bigToggle.Text = "Silent Aim : ENABLED"
+    else
+        bigToggle.BackgroundColor3 = Color3.fromRGB(150, 60, 120)
+        bigToggle.Text = "Silent Aim : DISABLED"
+    end
+    fovCircle.Visible = state
+end
+
+bigToggle.MouseButton1Click:Connect(function()
+    setMainToggle(not SilentEnabled)
+end)
+
+setMainToggle(false)
+
+local setSilentToggle = createToggle(leftGroup, "Enabled", 0, false, function(v)
+    setMainToggle(v)
+end)
+
+local setLockToggle = createToggle(leftGroup, "Camera Lock", 1, true, function(v)
+    CameraLockEnabled = v
+end)
+
+createKeyLabel(leftGroup, "Aim Key", "M2", 2)
+
+updateFOVVisual()
+
+local function switchTab(tab)
+    if tab == "Silent" then
+        pageSilent.Visible = true
+        pageSettings.Visible = false
+        tabSilent.BackgroundColor3 = Color3.fromRGB(23, 14, 60)
+        tabSilent.TextColor3 = Color3.fromRGB(235, 225, 255)
+        tabSettings.BackgroundColor3 = Color3.fromRGB(12, 9, 35)
+        tabSettings.TextColor3 = Color3.fromRGB(120, 110, 170)
+    else
+        pageSilent.Visible = true
+        pageSettings.Visible = false
+        tabSilent.BackgroundColor3 = Color3.fromRGB(23, 14, 60)
+        tabSilent.TextColor3 = Color3.fromRGB(235, 225, 255)
+        tabSettings.BackgroundColor3 = Color3.fromRGB(12, 9, 35)
+        tabSettings.TextColor3 = Color3.fromRGB(120, 110, 170)
+    end
+end
+
+tabSilent.MouseButton1Click:Connect(function()
+    switchTab("Silent")
+end)
+
+tabSettings.MouseButton1Click:Connect(function()
+    switchTab("Settings")
+end)
+
+switchTab("Silent")
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then
+        return
+    end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        Aiming = true
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        Aiming = false
+        currentTarget = nil
+        currentHumanoid = nil
+        currentHead = nil
+        targetHeadForRaycast = nil
+        if currentHumanoidConn then
+            currentHumanoidConn:Disconnect()
+            currentHumanoidConn = nil
+        end
+    end
+end)
+
+local function isValidTarget(model, center)
+    if not model or model == LocalPlayer.Character then
+        return false
+    end
+    if not model:IsDescendantOf(workspace) then
+        return false
+    end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local head = model:FindFirstChild("Head")
+    if not hum or not head then
+        return false
+    end
+    if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+        return false
+    end
+    local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+    if not onScreen then
+        return false
+    end
+    local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+    if dist > FOVRadius then
+        return false
+    end
+    return true, hum, head, dist
+end
+
+local function getClosestTarget()
+    local bestModel
+    local bestHum
+    local bestHead
+    local bestDist = FOVRadius
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj ~= LocalPlayer.Character then
+            local ok, hum, head, dist = isValidTarget(obj, center)
+            if ok and dist <= bestDist then
+                bestDist = dist
+                bestModel = obj
+                bestHum = hum
+                bestHead = head
+            end
+        end
+    end
+    return bestModel, bestHum, bestHead
+end
+
+local function setTarget(model, hum)
+    if currentHumanoidConn then
+        currentHumanoidConn:Disconnect()
+        currentHumanoidConn = nil
+    end
+    currentTarget = model
+    currentHumanoid = hum
+    currentHead = nil
+    if hum and hum.Parent then
+        currentHumanoidConn = hum.Died:Connect(function()
+            if currentHumanoid == hum then
+                currentTarget = nil
+                currentHumanoid = nil
+                currentHead = nil
+                targetHeadForRaycast = nil
+            end
+        end)
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+    if not SilentEnabled or not Aiming then
+        targetHeadForRaycast = nil
+        currentHead = nil
+        return
+    end
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local ok, hum, head
+    if currentTarget then
+        ok, hum, head = isValidTarget(currentTarget, center)
+    end
+    if not ok then
+        local m, newHum, newHead = getClosestTarget()
+        if m and newHum and newHead then
+            setTarget(m, newHum)
+            hum = newHum
+            head = newHead
+        else
+            targetHeadForRaycast = nil
+            currentHead = nil
+            return
+        end
+    else
+        if hum ~= currentHumanoid then
+            setTarget(currentTarget, hum)
+        end
+    end
+    currentHead = head
+    targetHeadForRaycast = head
+    if head and CameraLockEnabled then
+        local origin = Camera.CFrame.Position
+        Camera.CFrame = CFrame.new(origin, head.Position)
+    end
+end)
+
+if hookmetamethod then
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if method == "Raycast" and self == workspace and SilentEnabled and Aiming and targetHeadForRaycast then
+            local origin = args[1]
+            local direction = args[2]
+            if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+                local headPos = targetHeadForRaycast.Position
+                local newDir = (headPos - origin).Unit * direction.Magnitude
+                args[2] = newDir
+                return oldNamecall(self, unpack(args))
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+else
+    local mt = getrawmetatable(game)
+    oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if method == "Raycast" and self == workspace and SilentEnabled and Aiming and targetHeadForRaycast then
+            local origin = args[1]
+            local direction = args[2]
+            if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+                local headPos = targetHeadForRaycast.Position
+                local newDir = (headPos - origin).Unit * direction.Magnitude
+                args[2] = newDir
+                return oldNamecall(self, unpack(args))
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+end
